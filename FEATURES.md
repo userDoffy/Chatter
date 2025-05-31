@@ -1,9 +1,9 @@
 # FEATURES
-1)Auth
+1) Auth
 - Sign Up
 - Login
 
-2)Functional
+2) Functional
 - Adding contacts
 - File Sharing
 - Creating groups
