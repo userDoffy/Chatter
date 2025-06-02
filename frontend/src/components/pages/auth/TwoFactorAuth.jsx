@@ -1,16 +1,26 @@
 import React, { useRef, useState } from 'react';
 import { Container, Row, Col, Card, Form, Button, Alert, Image } from 'react-bootstrap';
+import { useNavigate , useLocation} from 'react-router-dom';
+import { twoFactorAuth } from '../../../axios/authApi'
+import useForm from '../../../customhooks/useForm';
+import toast from 'react-hot-toast';
 
 const TwoFactorAuth = () => {
-  const [code, setCode] = useState(new Array(6).fill(''));
+  const [error, setError] = useState('');
+  const [verifying, setVerifying] = useState(false);
   const inputsRef = useRef([]);
+  const navigate = useNavigate();
+  const location = useLocation();
+  const email = location.state?.email;
+
+  // useForm for 6 digits (custom usage)
+  const { formData: codeArray, handleChange: handleDigitChange } = useForm(
+    Array(6).fill('')
+  );
 
   const handleChange = (element, index) => {
-    if (!/^[0-9]?$/.test(element.value)) return; // allow only digits or empty
-
-    const newCode = [...code];
-    newCode[index] = element.value;
-    setCode(newCode);
+    if (!/^[0-9]?$/.test(element.value)) return;
+    handleDigitChange({ target: { name: index, value: element.value } });
 
     if (element.value && index < 5) {
       inputsRef.current[index + 1].focus();
@@ -18,16 +28,37 @@ const TwoFactorAuth = () => {
   };
 
   const handleKeyDown = (e, index) => {
-    if (e.key === 'Backspace' && !code[index] && index > 0) {
+    if (e.key === 'Backspace' && !codeArray[index] && index > 0) {
       inputsRef.current[index - 1].focus();
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    const enteredCode = code.join('');
-    // TODO: Validate code or submit
-    
+    const code = codeArray.join('');
+    if (code.length < 6) {
+      setError('Please enter all 6 digits.');
+      return;
+    }
+
+    setVerifying(true);
+    try {
+      const response=await twoFactorAuth({email:email,Otp:code});
+      if (response.status == 200) {
+        navigate('/');
+        toast.success("Account verified successfully!");
+      }
+      else{
+        navigate("/login");
+        toast.error("Invalid OTP. Please try again.");
+      }
+    } catch (error) {
+      console.error("Error verifying OTP:", error);
+       navigate("/login");
+      toast.error("Error verifying OTP. Please try again.");
+    } finally {
+      setVerifying(false);
+    }
   };
 
   return (
@@ -44,12 +75,7 @@ const TwoFactorAuth = () => {
           <Col md={{ span: 6, offset: 3 }}>
             <Card className="p-4 shadow-lg rounded-4 border-0">
               <Card.Body className="text-center">
-                <Image
-                  src="/gmail.jpg"
-                  alt="Gmail"
-                  width={60}
-                  className="mb-3"
-                />
+                <Image src="/gmail.jpg" alt="Gmail" width={60} className="mb-3" />
                 <h3 className="mb-3 fw-bold">Enter the code</h3>
                 <p className="text-muted mb-4">
                   We've sent a 6-digit verification code to your Gmail.
@@ -57,7 +83,7 @@ const TwoFactorAuth = () => {
 
                 <Form onSubmit={handleSubmit}>
                   <div className="d-flex justify-content-center mb-4" style={{ gap: '0.75rem' }}>
-                    {code.map((digit, idx) => (
+                    {codeArray.map((digit, idx) => (
                       <Form.Control
                         key={idx}
                         type="text"
@@ -68,22 +94,22 @@ const TwoFactorAuth = () => {
                         onKeyDown={(e) => handleKeyDown(e, idx)}
                         ref={el => inputsRef.current[idx] = el}
                         className="text-center fs-3 border rounded-3 shadow-sm"
-                        style={{ width: '3.5rem', height: '3.5rem', letterSpacing: '0.75rem'}}
+                        style={{ width: '3.5rem', height: '3.5rem', letterSpacing: '0.75rem' }}
                         autoFocus={idx === 0}
                       />
                     ))}
                   </div>
 
-                  {/* Feedback or error messages */}
-                  <Alert variant="danger" className="d-none">Invalid code. Please try again.</Alert>
+                  {error && <Alert variant="danger">{error}</Alert>}
 
                   <Button
                     variant="primary"
                     type="submit"
                     className="w-100 fw-semibold py-2"
+                    disabled={verifying}
                     style={{ backgroundColor: '#4285F4', border: 'none' }}
                   >
-                    Verify Code
+                    {verifying ? 'Verifying...' : 'Verify Code'}
                   </Button>
                 </Form>
 
@@ -99,7 +125,6 @@ const TwoFactorAuth = () => {
         </Row>
       </Container>
 
-      {/* Inline font import */}
       <link
         href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap"
         rel="stylesheet"
