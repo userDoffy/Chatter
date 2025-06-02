@@ -2,6 +2,7 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import Users from "../models/userModel.js";
 import { sendOtpEmail } from "../utils/nodemailer.js";
+import { genSalt } from "bcrypt";
 import dotenv from "dotenv";
 dotenv.config();
 
@@ -21,10 +22,13 @@ export const signup = async (req, res, next) => {
     const Otp = Math.floor(100000 + Math.random() * 900000).toString();
     const OtpExpireAt = new Date(Date.now() + 5 * 60 * 1000);
 
+    const salt = await genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
     const newUser = await Users.create({
       username,
       email,
-      password,
+      password:hashedPassword,
       Otp,
       OtpExpireAt,
     });
@@ -81,8 +85,7 @@ export const twoFactorAuth = async (req, res, next) => {
 
 export const login = async (req, res, next) => {
   try {
-    const { email, password, role } = req.body;
-
+    const { email, password } = req.body;
     const user = await Users.findOne({ email });
     if (!user) {
       return res
@@ -91,23 +94,18 @@ export const login = async (req, res, next) => {
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
-
-    if (!isPasswordValid || !user.isAccountVerified) {
+   
+    
+    if (!isPasswordValid || !user.isVerified) {
       return res
         .status(400)
         .json({ status: "error", message: "Invalid email or password." });
     }
 
-    if (!(user.role === role)) {
-      return res
-        .status(400)
-        .json({ status: "error", message: "Your role doesn't match." });
-    }
-
     const token = jwt.sign({ _id: user._id, email: user.email }, JWT_SECRET, {
       expiresIn: "5d",
     });
-
+    
     res.cookie("token", token, {
       httpOnly: true,
       secure: true,
@@ -155,5 +153,16 @@ export const getCurrentUser = async (req, res) => {
     return res
       .status(500)
       .json({ status: "error", message: "Internal server error" });
+  }
+};
+
+export const logout = async (req, res, next) => {
+  try {
+    res.clearCookie("token");
+    res
+      .status(200)
+      .json({ status: "success", message: "Logged out successfully!" });
+  } catch (error) {
+    next(error);
   }
 };

@@ -1,7 +1,7 @@
 import axiosInstance from "./axiosInstance";
 
 export const loginUser = (formData) => {
-  return axiosInstance.post("/auth/login", formData);
+  return axiosInstance.post("/auth/login", formData,{ headers: { "Content-Type": "application/json" } });
 };
 
 export const signupUser = (formData) => {
@@ -14,4 +14,7 @@ export const twoFactorAuth = (formdata) => {
 
 export const getCurrentUser = () => {
   return axiosInstance.get("/auth/get-current-user");
+}
+export const logoutUser = () => {
+  return axiosInstance.get("/auth/logout");
 }
