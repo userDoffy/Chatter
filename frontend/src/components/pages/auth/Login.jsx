@@ -10,7 +10,8 @@ import  toast  from 'react-hot-toast';
 const Login = () => {
   const navigate = useNavigate();
 
-  const onSubmit = async (formData) => {
+  const handleSubmit = async (e) => {
+    e.preventDefault();
     const response = await loginUser(formData);
     if (response.status === 200) {
       navigate("/");
@@ -22,13 +23,11 @@ const Login = () => {
     }
   };
 
-  const {
-    formData,
-    error,
-    loading,
-    handleChange,
-    handleSubmit
-  } = useForm({ email: '', password: '' }, onSubmit);
+  const { formData, handleChange } = useForm({
+    username: "",
+    email: "",
+    password: "",
+  });
 
   return (
     <>
@@ -54,7 +53,7 @@ const Login = () => {
 
                 <h2 className="mb-4 text-center fw-bold accent-color fancy-heading">Welcome</h2>
 
-                {error && <Alert variant="danger">{error}</Alert>}
+
 
                 <Form onSubmit={handleSubmit}>
                   <Form.Group className="mb-3">
@@ -88,9 +87,9 @@ const Login = () => {
                     type="submit"
                     className="w-100 fw-semibold shadow-sm btn-accent"
                     size="lg"
-                    disabled={loading}
+                   
                   >
-                    {loading ? <Spinner animation="border" size="sm" /> : 'Log In'}
+                    Log In
                   </Button>
                 </Form>
 
